@@ -12,6 +12,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(forgesim
     src/main.cpp
+    src/core/Node.cpp
+    src/core/Graph.cpp
 )
 
 target_include_directories(forgesim
