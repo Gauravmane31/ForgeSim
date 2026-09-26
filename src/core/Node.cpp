@@ -26,3 +26,11 @@ void Node::addDependent(int id){
 void Node::setState(NodeState st){
     state=st;
 }
+
+const std::vector<int>& Node::getDependencies() const {
+    return dependencies;
+}
+
+const std::vector<int>& Node::getDependents() const {
+    return dependents;
+}

@@ -23,8 +23,10 @@ class Node
 public:
     Node(int id, std::string name);
     int getId() const;
-    const std::string &getName() const;// used to skip making copy of itself for returning
+    const std::string &getName() const; // used to skip making copy of itself for returning
     NodeState getState() const;
+    const std::vector<int> &getDependencies() const;//we added these functions to get access of dependancies and dependants by graph  
+    const std::vector<int> &getDependents() const;
     void addDependency(int id);
     void addDependent(int id);
     void setState(NodeState st);

@@ -22,4 +22,8 @@ public:
     std::size_t getNodeCount() const;
 
     const std::unordered_map<int, Node>& getNodes() const;
+
+    bool hasCycle() const;
+
+    std::vector<int> topologicalSort() const;
 };

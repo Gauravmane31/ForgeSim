@@ -12,8 +12,20 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(forgesim
     src/main.cpp
+
     src/core/Node.cpp
     src/core/Graph.cpp
+    src/core/Result.cpp
+
+    src/core/ConstantComputation.cpp
+    src/core/MultiplyComputation.cpp
+    src/core/DivideComputation.cpp
+
+    src/execution/Scheduler.cpp
+    src/execution/ThreadPool.cpp
+    src/execution/CacheManager.cpp
+    src/core/ImpactAnalyzer.cpp
+    src/execution/ExecutionMetrics.cpp
 )
 
 target_include_directories(forgesim
