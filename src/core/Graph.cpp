@@ -157,3 +157,41 @@ std::vector<int> Graph::topologicalSort() const {
 
     return order;
 }
+
+bool Graph::markChanged(
+    int nodeId
+)
+{
+    Node* node =
+        getNode(nodeId);
+
+    if (node == nullptr)
+    {
+        return false;
+    }
+
+    node->markDirty();
+
+    return true;
+}
+
+
+std::vector<int>
+Graph::getDirtyNodes() const
+{
+    std::vector<int> dirtyNodes;
+
+    for (const auto& [id, node] :
+         nodes)
+    {
+        if (
+            node.getState() ==
+            NodeState::DIRTY
+        )
+        {
+            dirtyNodes.push_back(id);
+        }
+    }
+
+    return dirtyNodes;
+}

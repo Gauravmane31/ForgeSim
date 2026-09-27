@@ -14,16 +14,13 @@
 #include "ForgeSim/execution/ThreadPool.hpp"
 #include "ForgeSim/execution/ExecutionMetrics.hpp"
 
-
 class Scheduler
 {
 private:
-
     std::unordered_map<
         int,
-        std::shared_ptr<Computation>
-    > computations;
-
+        std::shared_ptr<Computation>>
+        computations;
 
     CacheManager cacheManager;
 
@@ -31,23 +28,16 @@ private:
     ExecutionMetrics metrics;
 
 public:
-
     void registerComputation(
         int nodeId,
-        std::shared_ptr<Computation> computation
-    );
-
+        std::shared_ptr<Computation> computation);
 
     std::unordered_map<int, Result> execute(
-        const Graph& graph
-    ) const;
-
+        const Graph &graph) const;
 
     std::unordered_map<int, Result> executeParallel(
-        const Graph& graph,
-        std::size_t workerCount
-    ) const;
-
+        const Graph &graph,
+        std::size_t workerCount) const;
 
     /*
         Incremental execution.
@@ -56,10 +46,8 @@ public:
         input/value has changed.
     */
     std::unordered_map<int, Result> executeIncremental(
-        const Graph& graph,
-        const std::vector<int>& changedNodes,
-        std::size_t workerCount
-    );
+        Graph &graph,
+        std::size_t workerCount);
 
-    const ExecutionMetrics& getMetrics() const;
+    const ExecutionMetrics &getMetrics() const;
 };

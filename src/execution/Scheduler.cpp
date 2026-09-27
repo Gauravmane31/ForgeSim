@@ -4,27 +4,23 @@
 #include <stdexcept>
 #include <vector>
 
-
 // ============================================================
 // Register a computation for a node
 // ============================================================
 
 void Scheduler::registerComputation(
     int nodeId,
-    std::shared_ptr<Computation> computation
-)
+    std::shared_ptr<Computation> computation)
 {
     if (!computation)
     {
         throw std::invalid_argument(
-            "Cannot register a null computation"
-        );
+            "Cannot register a null computation");
     }
 
     computations[nodeId] =
         std::move(computation);
 }
-
 
 // ============================================================
 // Sequential execution
@@ -32,45 +28,36 @@ void Scheduler::registerComputation(
 
 std::unordered_map<int, Result>
 Scheduler::execute(
-    const Graph& graph
-) const
+    const Graph &graph) const
 {
     std::unordered_map<int, Result> results;
 
     const std::vector<int> executionOrder =
         graph.topologicalSort();
 
-
     for (int nodeId : executionOrder)
     {
-        const Node* node =
+        const Node *node =
             graph.getNode(nodeId);
-
 
         if (node == nullptr)
         {
             throw std::runtime_error(
-                "Node not found during execution"
-            );
+                "Node not found during execution");
         }
-
 
         auto computationIt =
             computations.find(nodeId);
-
 
         if (computationIt ==
             computations.end())
         {
             throw std::runtime_error(
                 "No computation registered for node: " +
-                std::to_string(nodeId)
-            );
+                std::to_string(nodeId));
         }
 
-
         std::vector<Result> inputs;
-
 
         for (int dependencyId :
              node->getDependencies())
@@ -78,37 +65,28 @@ Scheduler::execute(
             auto resultIt =
                 results.find(dependencyId);
 
-
             if (resultIt ==
                 results.end())
             {
                 throw std::runtime_error(
                     "Dependency result not available for node: " +
-                    std::to_string(nodeId)
-                );
+                    std::to_string(nodeId));
             }
 
-
             inputs.push_back(
-                resultIt->second
-            );
+                resultIt->second);
         }
-
 
         Result result =
             computationIt->second->calculate(
-                inputs
-            );
-
+                inputs);
 
         results[nodeId] =
             result;
     }
 
-
     return results;
 }
-
 
 // ============================================================
 // Parallel execution
@@ -116,9 +94,8 @@ Scheduler::execute(
 
 std::unordered_map<int, Result>
 Scheduler::executeParallel(
-    const Graph& graph,
-    std::size_t workerCount
-) const
+    const Graph &graph,
+    std::size_t workerCount) const
 {
     ThreadPool pool(workerCount);
 
@@ -130,19 +107,16 @@ Scheduler::executeParallel(
 
     std::queue<int> ready;
 
-
     // --------------------------------------------------------
     // Find initially-ready nodes
     // --------------------------------------------------------
 
-    for (const auto& [id, node] :
+    for (const auto &[id, node] :
          graph.getNodes())
     {
         remainingDependencies[id] =
             static_cast<int>(
-                node.getDependencies().size()
-            );
-
+                node.getDependencies().size());
 
         if (remainingDependencies[id] == 0)
         {
@@ -150,9 +124,7 @@ Scheduler::executeParallel(
         }
     }
 
-
     std::size_t processedNodes = 0;
-
 
     // --------------------------------------------------------
     // Process graph level by level
@@ -162,16 +134,13 @@ Scheduler::executeParallel(
     {
         std::vector<int> currentBatch;
 
-
         while (!ready.empty())
         {
             currentBatch.push_back(
-                ready.front()
-            );
+                ready.front());
 
             ready.pop();
         }
-
 
         struct PendingTask
         {
@@ -180,10 +149,8 @@ Scheduler::executeParallel(
             std::future<Result> future;
         };
 
-
         std::vector<PendingTask>
             pendingTasks;
-
 
         // ----------------------------------------------------
         // Submit current batch to ThreadPool
@@ -192,34 +159,27 @@ Scheduler::executeParallel(
         for (int nodeId :
              currentBatch)
         {
-            const Node* node =
+            const Node *node =
                 graph.getNode(nodeId);
-
 
             if (node == nullptr)
             {
                 throw std::runtime_error(
-                    "Node not found during parallel execution"
-                );
+                    "Node not found during parallel execution");
             }
-
 
             auto computationIt =
                 computations.find(nodeId);
-
 
             if (computationIt ==
                 computations.end())
             {
                 throw std::runtime_error(
                     "No computation registered for node: " +
-                    std::to_string(nodeId)
-                );
+                    std::to_string(nodeId));
             }
 
-
             std::vector<Result> inputs;
-
 
             for (int dependencyId :
                  node->getDependencies())
@@ -227,65 +187,48 @@ Scheduler::executeParallel(
                 auto resultIt =
                     results.find(dependencyId);
 
-
                 if (resultIt ==
                     results.end())
                 {
                     throw std::runtime_error(
-                        "Dependency result not available"
-                    );
+                        "Dependency result not available");
                 }
 
-
                 inputs.push_back(
-                    resultIt->second
-                );
+                    resultIt->second);
             }
-
 
             auto future =
                 pool.submit(
-                    [
-                        computation =
-                            computationIt->second,
+                    [computation =
+                         computationIt->second,
 
-                        inputs =
-                            std::move(inputs)
-                    ]()
+                     inputs =
+                         std::move(inputs)]()
                     {
-                        return computation->
-                            calculate(inputs);
-                    }
-                );
-
+                        return computation->calculate(inputs);
+                    });
 
             pendingTasks.push_back(
-                {
-                    nodeId,
-                    std::move(future)
-                }
-            );
+                {nodeId,
+                 std::move(future)});
         }
-
 
         // ----------------------------------------------------
         // Collect results
         // ----------------------------------------------------
 
-        for (auto& task :
+        for (auto &task :
              pendingTasks)
         {
             Result result =
                 task.future.get();
 
-
             results[task.nodeId] =
                 result;
 
-
             ++processedNodes;
         }
-
 
         // ----------------------------------------------------
         // Unlock dependent nodes
@@ -294,34 +237,24 @@ Scheduler::executeParallel(
         for (int completedNodeId :
              currentBatch)
         {
-            const Node* node =
+            const Node *node =
                 graph.getNode(
-                    completedNodeId
-                );
-
+                    completedNodeId);
 
             for (int dependentId :
                  node->getDependents())
             {
-                --remainingDependencies[
-                    dependentId
-                ];
-
+                --remainingDependencies[dependentId];
 
                 if (
-                    remainingDependencies[
-                        dependentId
-                    ] == 0
-                )
+                    remainingDependencies[dependentId] == 0)
                 {
                     ready.push(
-                        dependentId
-                    );
+                        dependentId);
                 }
             }
         }
     }
-
 
     // --------------------------------------------------------
     // Detect invalid graph
@@ -329,18 +262,14 @@ Scheduler::executeParallel(
 
     if (
         processedNodes !=
-        graph.getNodeCount()
-    )
+        graph.getNodeCount())
     {
         throw std::runtime_error(
-            "Graph contains a cycle or invalid dependency state"
-        );
+            "Graph contains a cycle or invalid dependency state");
     }
-
 
     return results;
 }
-
 
 // ============================================================
 // Incremental execution
@@ -348,70 +277,101 @@ Scheduler::executeParallel(
 
 std::unordered_map<int, Result>
 Scheduler::executeIncremental(
-    const Graph& graph,
-    const std::vector<int>& changedNodes,
-    std::size_t workerCount
-)
+    Graph &graph,
+    std::size_t workerCount)
 {
     // --------------------------------------------------------
     // STEP 1:
-    // Find every node affected by the change.
+    // Automatically discover dirty nodes.
+    // --------------------------------------------------------
+
+    const std::vector<int> changedNodes =
+        graph.getDirtyNodes();
+
+    if (changedNodes.empty())
+    {
+        /*
+            Nothing changed.
+
+            Return the current cached results
+            without performing any computation.
+        */
+
+        std::unordered_map<int, Result>
+            results;
+
+        for (const auto &[nodeId, node] :
+             graph.getNodes())
+        {
+            if (
+                cacheManager.contains(
+                    nodeId))
+            {
+                results[nodeId] =
+                    cacheManager.get(
+                        nodeId);
+            }
+        }
+
+        metrics.reset();
+
+        metrics.setTotalNodes(
+            graph.getNodeCount());
+
+        for (
+            std::size_t i = 0;
+            i < graph.getNodeCount();
+            ++i)
+        {
+            metrics.recordCacheHit();
+        }
+
+        return results;
+    }
+
+    // --------------------------------------------------------
+    // STEP 2:
+    // Find every node affected by the changes.
     // --------------------------------------------------------
 
     const auto affectedNodes =
         impactAnalyzer.findAffectedNodes(
             graph,
-            changedNodes
-        );
-
+            changedNodes);
 
     // --------------------------------------------------------
-    // STEP 2:
-    // Reset metrics for this execution.
+    // STEP 3:
+    // Reset metrics.
     // --------------------------------------------------------
 
     metrics.reset();
 
-
     metrics.setTotalNodes(
-        graph.getNodeCount()
-    );
-
-
-    // --------------------------------------------------------
-    // STEP 3:
-    // Everything outside the affected subgraph
-    // can potentially be reused from cache.
-    // --------------------------------------------------------
+        graph.getNodeCount());
 
     const std::size_t unaffectedNodes =
         graph.getNodeCount() -
         affectedNodes.size();
 
-
     for (
         std::size_t i = 0;
         i < unaffectedNodes;
-        ++i
-    )
+        ++i)
     {
         metrics.recordCacheHit();
     }
 
-
     // --------------------------------------------------------
     // STEP 4:
-    // Invalidate affected nodes.
+    // Invalidate affected cache entries.
     // --------------------------------------------------------
 
     for (int nodeId :
          affectedNodes)
     {
         cacheManager.invalidate(
-            nodeId
-        );
+            nodeId);
     }
-
 
     // --------------------------------------------------------
     // STEP 5:
@@ -420,81 +380,69 @@ Scheduler::executeIncremental(
 
     ThreadPool pool(workerCount);
 
-
     std::unordered_map<int, int>
         remainingDependencies;
 
     std::queue<int> ready;
 
-
     // --------------------------------------------------------
     // STEP 6:
-    // Calculate how many affected dependencies
-    // each affected node is waiting for.
+    // Determine which affected nodes are ready.
     // --------------------------------------------------------
 
     for (int nodeId :
          affectedNodes)
     {
-        const Node* node =
+        Node *node =
             graph.getNode(nodeId);
-
 
         if (node == nullptr)
         {
             throw std::runtime_error(
-                "Affected node not found"
-            );
+                "Affected node not found");
         }
 
-
         int remaining = 0;
-
 
         for (int dependencyId :
              node->getDependencies())
         {
             if (
                 affectedNodes.contains(
-                    dependencyId
-                )
-            )
+                    dependencyId))
             {
                 ++remaining;
             }
         }
 
-
         remainingDependencies[nodeId] =
             remaining;
 
-
         if (remaining == 0)
         {
+            node->setState(
+                NodeState::READY);
+
             ready.push(nodeId);
         }
     }
 
-
     // --------------------------------------------------------
     // STEP 7:
-    // Execute affected nodes level by level.
+    // Execute affected nodes.
     // --------------------------------------------------------
 
     while (!ready.empty())
     {
         std::vector<int> currentBatch;
 
-
         while (!ready.empty())
         {
             currentBatch.push_back(
-                ready.front()
-            );
+                ready.front());
 
             ready.pop();
         }
-
 
         struct PendingTask
         {
@@ -503,210 +451,180 @@ Scheduler::executeIncremental(
             std::future<Result> future;
         };
 
-
         std::vector<PendingTask>
             pendingTasks;
 
-
         // ----------------------------------------------------
-        // Submit current batch
+        // Submit ready computations.
         // ----------------------------------------------------
 
         for (int nodeId :
              currentBatch)
         {
-            const Node* node =
+            Node *node =
                 graph.getNode(nodeId);
-
 
             auto computationIt =
                 computations.find(nodeId);
 
-
             if (
                 computationIt ==
-                computations.end()
-            )
+                computations.end())
             {
                 throw std::runtime_error(
                     "No computation registered for node: " +
-                    std::to_string(nodeId)
-                );
+                    std::to_string(nodeId));
             }
 
+            node->setState(
+                NodeState::RUNNING);
 
             std::vector<Result> inputs;
-
-
-            // ------------------------------------------------
-            // Gather inputs.
-            //
-            // Some dependencies may be newly computed.
-            // Others may come directly from cache.
-            // ------------------------------------------------
 
             for (int dependencyId :
                  node->getDependencies())
             {
                 if (
                     !cacheManager.contains(
-                        dependencyId
-                    )
-                )
+                        dependencyId))
                 {
                     throw std::runtime_error(
                         "Required cached result "
                         "does not exist for node: " +
                         std::to_string(
-                            dependencyId
-                        )
-                    );
+                            dependencyId));
                 }
-
 
                 inputs.push_back(
                     cacheManager.get(
-                        dependencyId
-                    )
-                );
+                        dependencyId));
             }
-
-
-            // ------------------------------------------------
-            // Submit computation
-            // ------------------------------------------------
 
             auto future =
                 pool.submit(
-                    [
-                        computation =
-                            computationIt->second,
+                    [computation =
+                         computationIt->second,
 
-                        inputs =
-                            std::move(inputs)
-                    ]()
+                     inputs =
+                         std::move(inputs)]()
                     {
-                        return computation->
-                            calculate(inputs);
-                    }
-                );
-
+                        return computation->calculate(inputs);
+                    });
 
             pendingTasks.push_back(
-                {
-                    nodeId,
-                    std::move(future)
-                }
-            );
+                {nodeId,
+                 std::move(future)});
         }
 
-
         // ----------------------------------------------------
-        // Collect newly computed results
+        // Collect results.
         // ----------------------------------------------------
 
-        for (auto& task :
+        for (auto &task :
              pendingTasks)
         {
-            Result result =
-                task.future.get();
+            try
+            {
+                Result result =
+                    task.future.get();
 
+                cacheManager.store(
+                    task.nodeId,
+                    result);
 
-            cacheManager.store(
-                task.nodeId,
-                result
-            );
+                Node *node =
+                    graph.getNode(
+                        task.nodeId);
 
+                node->setState(
+                    NodeState::COMPLETED);
 
-            metrics.recordComputed();
+                metrics.recordComputed();
+            }
+            catch (...)
+            {
+                Node *node =
+                    graph.getNode(
+                        task.nodeId);
+
+                node->setState(
+                    NodeState::FAILED);
+
+                throw;
+            }
         }
 
-
         // ----------------------------------------------------
-        // Unlock affected dependents
+        // Unlock dependent nodes.
         // ----------------------------------------------------
 
         for (
             int completedNodeId :
-            currentBatch
-        )
+            currentBatch)
         {
-            const Node* node =
+            const Node *node =
                 graph.getNode(
-                    completedNodeId
-                );
-
+                    completedNodeId);
 
             for (
                 int dependentId :
-                node->getDependents()
-            )
+                node->getDependents())
             {
                 if (
                     !affectedNodes.contains(
-                        dependentId
-                    )
-                )
+                        dependentId))
                 {
                     continue;
                 }
 
-
-                --remainingDependencies[
-                    dependentId
-                ];
-
+                --remainingDependencies[dependentId];
 
                 if (
-                    remainingDependencies[
-                        dependentId
-                    ] == 0
-                )
+                    remainingDependencies[dependentId] == 0)
                 {
+                    Node *dependent =
+                        graph.getNode(
+                            dependentId);
+
+                    dependent->setState(
+                        NodeState::READY);
+
                     ready.push(
-                        dependentId
-                    );
+                        dependentId);
                 }
             }
         }
     }
 
-
     // --------------------------------------------------------
     // STEP 8:
-    // Return the complete current result set.
+    // Return current results.
     // --------------------------------------------------------
 
     std::unordered_map<int, Result>
         results;
 
-
-    for (const auto& [nodeId, node] :
+    for (const auto &[nodeId, node] :
          graph.getNodes())
     {
         if (
             cacheManager.contains(
-                nodeId
-            )
-        )
+                nodeId))
         {
             results[nodeId] =
                 cacheManager.get(
-                    nodeId
-                );
+                    nodeId);
         }
     }
 
-
     return results;
 }
-
 
 // ============================================================
 // Metrics accessor
 // ============================================================
 
-const ExecutionMetrics&
+const ExecutionMetrics &
 Scheduler::getMetrics() const
 {
     return metrics;

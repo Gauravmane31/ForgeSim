@@ -5,15 +5,16 @@
 
 #include "ForgeSim/core/Node.hpp"
 
-class Graph {
+class Graph
+{
 private:
     std::unordered_map<int, Node> nodes;
 
 public:
-    bool addNode(const Node& node);
+    bool addNode(const Node &node);
 
-    Node* getNode(int id);
-    const Node* getNode(int id) const;
+    Node *getNode(int id);
+    const Node *getNode(int id) const;
 
     bool addDependency(int nodeId, int dependencyId);
 
@@ -21,9 +22,13 @@ public:
 
     std::size_t getNodeCount() const;
 
-    const std::unordered_map<int, Node>& getNodes() const;
+    const std::unordered_map<int, Node> &getNodes() const;
 
     bool hasCycle() const;
 
     std::vector<int> topologicalSort() const;
+
+    bool markChanged(int nodeId);
+
+    std::vector<int> getDirtyNodes() const;
 };
